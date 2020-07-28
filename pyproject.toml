@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "pnmap"
+version = "0.1.0"
+description = "a simplified python implementation of nmap"
+authors = ["Andrew Stefanich <andrewstefanich@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+click = "^7.1.2"
+scapy = "^2.4.3"
+
+[tool.poetry.dev-dependencies]
+autopep8 = "^1.5.3"
+mypy = "^0.782"
+
+[tool.poetry.scripts]
+pnmap = "pnmap.console:main"
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
+
