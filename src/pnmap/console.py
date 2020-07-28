@@ -1,8 +1,8 @@
 import click
 import re
 import pnmap.subnet
+import pnmap.arp
 from scapy.all import *
-from scapy.plist import SndRcvList
 from typing import List, Optional, Tuple
 
 # result = scan_tcp_port(ip)
@@ -30,24 +30,23 @@ def main(iface: str, ip: str, portrange: Tuple[int]):
         sys.exit()
 
     if ip == "":
-        subnet = pnmap.subnet.determine_subnet(iface)
-        if not subnet:
+        ip = pnmap.subnet.determine_subnet(iface)
+        if not ip:
             print("No IP provided; and subnet cannot be determined. Please provide explicit IP")
-        print(f"your subnet is {subnet}")
-        print(type(portrange))
-        # print(f"subnet host {subnet.host}")
-        # print(f"subnet mask {subnet.mask}")
-        # print(f"subnet cidr {subnet.cidr}")
+            sys.exit()
+
+    scan(iface, ip, portrange)
 
 
-
-def scan(ip, iface, portrange):
+def scan(iface, ip, portrange):
     print(f"scanning {args}")
-    (interface, outgoing_ip, gateway) = conf.route.route(args.ip)
+    (interface, outgoing_ip, gateway) = conf.route.route(ip)
+    if iface != interface:
+        print("The interface you provided does not match your default. Using {interface} instead...")
     print(gateway)
     if gateway == "0.0.0.0":
         print("doing arp_ping")
-        responses = arp_ping(interface, outgoing_ip)
+        responses = pnmap.arp.arp_ping(interface, outgoing_ip)
         print(f"arp results: {responses}")
 
 
