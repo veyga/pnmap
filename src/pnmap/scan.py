@@ -1,9 +1,6 @@
-#!/usr/bin/env python
-
-from scapy.all import IP, TCP, ICMP, sr
-from typing import List
+from scapy.all import Ether, IP, TCP, ICMP, sr
+from typing import List, Tuple
 import logging
-
 # This will suppress all messages that have a lower level of seriousness than error messages.
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 logging.getLogger("scapy.interactive").setLevel(logging.ERROR)
@@ -13,6 +10,10 @@ logging.getLogger("scapy.loading").setLevel(logging.ERROR)
 #     for target in targets:
 #         print("scanning sup")
 
+class Scanner:
+    def __init__(self, targets: List[Ether], portrange: Tuple[int,int]):
+        self.targets = targets
+        self.portrange = portrange
 class ScanResult():
     def __init__(self, open, closed, filtered):
         self.open = []

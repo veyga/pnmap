@@ -1,29 +1,38 @@
-import click
-import re
-import sys
-from scapy.all import srp, get_if_list, conf, IP, Ether, ARP, TCP
+from scapy.all import srp, srp1, get_if_list, conf, IP, Ether, ARP, TCP, ICMP
 from pnmap.subnet import *
+from pnmap.scan import Scanner
 from typing import List, Optional, Tuple, Union
+import click
+import sys
+import logging
 
-# result = scan_tcp_port(ip)
-# for pkt in result.open:
-#     print(f"{pkt[0][0][TCP].dport} is OPEN!")
-# for pkt in result.closed:
-#     print(f"{pkt[0][0][TCP].dport} is CLOSED!")
-
-# click.echo("All others filtered")
-# click.echo(open)
-# print(f"{sent[TCP].dport} did not answer (is filtered!)"):
+# Suppress all logging less than error
+logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
+logging.getLogger("scapy.interactive").setLevel(logging.ERROR)
+logging.getLogger("scapy.loading").setLevel(logging.ERROR)
 
 
+VALID_IPS = ''' Target host\n
+                single IP: -t 192.168.1.4\n
+                domain name: -t www.google.com\n
+                (default = your subnet) [multi-target]
+            '''
+VALID_PORTS = ''' Target port(s) to scan\n
+                  single port: -p 80\n
+                  multiple ports: -p 80 -p 443 -p 22
+              '''
+VALID_RANGE = ''' Target range of ports to scan\n
+                  --r 1 1024
+              '''
 
 @click.command()
-@click.argument("interface")
-@click.option("--ip", default="", help="single IP, CIDR, or domain name\n(default=your subnet)")
-@click.option("--portrange", nargs=2, default=(0, 80), type=int, help="Range to scan\n(default= --portrange 0 8)")
-def main(interface: str, ip: str, portrange: Tuple[int]):
+@click.argument("interface", nargs=1)
+@click.option("--ip","-i", type=str, help=VALID_IPS)
+@click.option("--ports","-p", multiple=True, type=click.INT, help=VALID_PORTS)
+@click.option("--range","-r", nargs=2, type=click.INT, help=VALID_RANGE)
+def main(interface: str, ip, ports, range):
     """ pnmap """
-    print("PNMAP WELCOME!")
+    ports = range if range else list(ports) if ports else [80]
     valid_interfaces = get_if_list()
     if interface not in valid_interfaces:
         print(f"{interface} not found in your interfaces ({valid_interfaces})")
@@ -31,50 +40,50 @@ def main(interface: str, ip: str, portrange: Tuple[int]):
 
     # default to local subnet 
     localnet = determine_subnet(interface)
-    if ip == "":
+    if not ip:
         ip = str(localnet)
 
-    scan(interface, ip, portrange, localnet)
+    nmap(interface, ip, ports, localnet)
 
 
-def scan(interface: str, ip: str, portrange: Tuple[int], localnet: Subnet):
-    print(f"Scanning ports {portrange} on host(s) {ip} via interface {interface}")
-    targets: List[IP] = []
-    if ip == str(localnet) or localnet.contains(ip):
-        targets = resolve_local_net(interface, ip, portrange)
+def nmap(interface: str, ip: str, ports: Union[list, tuple], localnet: Subnet):
+    if isinstance(ports, list):
+        print(f"pnmap scanning ports {ports} on host(s) {ip} via interface {interface}")
     else:
-        targets = resolve_external_net(interface, ip, portrange, localnet.gateway)
-        # target_ip = ip
-        # single_ip = re.search(r"[1-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}", ip)
-        # if single_ip:
-        # cidr = re.search(r"([1-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\/[0-9]{1,2})", ip)
-        # if cidr:
-        #     target_ip = cidr.group(1)
-        # (interface, _, gateway) = conf.route.route(target_ip)
-        # if iface != interface:
-        #     print("The interface you provided does not match your default. Using {interface} instead...")
-        # if gateway == "0.0.0.0":
-        #     targets = resolve_local_net(interface, ip, portrange)
-        # else:
-        #     targets = resolve_external_net(interface, ip, portrange)
+        print(f"pnmap scanning ports {ports[0]} to {ports[1]} on host(s) {ip} via interface {interface}")
+    frames: List[Ether] = []
+    if ip == str(localnet) or localnet.contains(ip):
+        frames = resolve_local_net(interface, ip, ports)
+    else:
+        frames = resolve_external_net(interface, ip, ports, localnet.gateway)
+    for frame in frames:
+        print(f"gonna do a port scan on ip {frame[IP].dst}")
 
 
-def resolve_local_net(interface: str, ip: str, portrange: Tuple[int]):
+def resolve_local_net(interface: str, ip: str, ports: Union[list,tuple]) -> List[Ether]:
     print(f"Target is (in) your subnet! ARP pinging")
     ans, unans = srp(Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(pdst=ip), timeout=5, iface=interface)
     responses = [rcvd for sent, rcvd in ans]
     if not responses:
         print(f"No ARP reply from {ip}, try scanning the whole subnet")
+        sys.exit()
     else:
-        targets: List[Ether] = []
+        frames: List[Ether] = []
         for pkt in responses:
-            print(f"mac = {pkt[ARP].hwsrc}    ip = {pkt[ARP].psrc}")
-            targets.append(Ether(dst=pkt[ARP].hwsrc) / IP(dst=pkt[ARP].psrc))
-        # correct
-        # for t in targets:
-        #     print(f"target  mac = {t.dst}   ip = {t[IP].dst}")
+            frames.append(Ether(dst=pkt[ARP].hwsrc) / IP(dst=pkt[ARP].psrc))
+        return frames
 
 
-def resolve_external_net(interface, ip, portrange, gateway):
-    print(f"scanning local net:  interface {interface} ip {ip} portrange {portrange}")
-    # print("scanning external net")
+def resolve_external_net(interface, ip, ports, gateway) -> List[Ether]:
+    print(f"Target is not in your subnet! Routing via gateway {gateway}")
+    arp_resp = srp1(Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(pdst=gateway), timeout=5, iface=interface, verbose=0)
+    if not arp_resp:
+        print(f"Unable to find MAC for gateway IP {gateway}. Is it up?")
+        sys.exit()
+    mac = arp_resp[ARP].hwsrc
+    print(f"Pinging {ip}...")
+    ans, unans = srp(Ether(dst=mac) / IP(dst=ip) / ICMP(), timeout = 5, iface=interface, verbose=1)
+    if not ans:
+        print(f"{ip} unreachable. exiting....")
+        sys.exit()
+    return [Ether(dst=mac) / IP(dst=ip)]
