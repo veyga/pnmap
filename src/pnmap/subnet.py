@@ -36,7 +36,7 @@ class Subnet:
         host = ".".join(host_oct)
         # calculate suffix
         total_len = 0
-        for oct in self.mask.split("."):
+        for oct in mask_oct:
             total_len += len(bin(int(oct))[2:])
         total_len -= 1  # exclude last 0
         return CIDR(host, total_len)
