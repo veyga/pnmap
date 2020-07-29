@@ -5,51 +5,45 @@ import subprocess, re
 
 @dataclass
 class CIDR:
-    host: str
+    netid: str
     suffix: int
 
     def __str__(self):
-        return f"{self.host}/{self.suffix}"
+        return f"{self.netid}/{self.suffix}"
 
 
 class Subnet:
-    def __init__(self, inet, mask):
+    def __init__(self, netid, mask):
+        self.netid = netid
         self.mask = mask
-        self.__cidr = self._calc_cidr(inet)
-        self.__gateway = self._calc_gateway()
+        self.cidr = self._calc_cidr()
+        self.gateway = self._calc_gateway()
 
-    @property
-    def cidr(self) -> CIDR:
-        return self.__cidr
-
-    @property
-    def gateway(self) -> str:
-        return self.__gateway
-
-    def _calc_cidr(self, ip) -> CIDR:
-        # calculate host address
+    @staticmethod
+    def from_host(ip, mask):
         ip_oct = ip.split(".")
-        mask_oct = self.mask.split(".")
-        host_oct: List[str] = []
+        mask_oct = mask.split(".")
+        net_oct: List[str] = []
         for i in range(4):
-            host_oct.append(str(int(mask_oct[i]) & int(ip_oct[i])))
-        host = ".".join(host_oct)
-        # calculate suffix
+            net_oct.append(str(int(mask_oct[i]) & int(ip_oct[i])))
+        netid = ".".join(net_oct)
+        return Subnet(netid, mask)
+
+    def _calc_cidr(self) -> CIDR:
         total_len = 0
-        for oct in mask_oct:
-            total_len += len(bin(int(oct))[2:])
-        total_len -= 1  # exclude last 0
-        return CIDR(host, total_len)
+        for oct in self.mask.split("."):
+            total_len += bin(int(oct)).count("1")
+        return CIDR(self.netid, total_len)
 
     def _calc_gateway(self) -> str:
-        host_octets = self.cidr.host.split(".")
+        net_octets = self.netid.split(".")
         target_oct = self.cidr.suffix // 8
         gateway_octets = []
         for i in range(4):
             if i != target_oct:
-                gateway_octets.append(host_octets[i])
+                gateway_octets.append(net_octets[i])
             else:
-                gateway_octets.append(str(int(host_octets[i]) + 1))
+                gateway_octets.append(str(int(net_octets[i]) + 1))
         return ".".join(gateway_octets)
 
 
@@ -77,4 +71,4 @@ def determine_subnet(interface: str) -> Subnet:
     match = re.search(rf"netmask ({IPV4r})", ifconfig_rez)
     if match:
         mask = match.group(1)
-    return Subnet(inet, mask)
+    return Subnet.from_host(inet, mask)

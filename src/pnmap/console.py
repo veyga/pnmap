@@ -1,5 +1,5 @@
 from scapy.all import srp, srp1, get_if_list, conf, IP, Ether, ARP, TCP, ICMP
-from pnmap.subnet import *
+from pnmap.subnet import Subnet, determine_subnet
 from pnmap.scan import Scanner
 from typing import List, Optional, Tuple, Union
 import click
@@ -12,24 +12,24 @@ logging.getLogger("scapy.interactive").setLevel(logging.ERROR)
 logging.getLogger("scapy.loading").setLevel(logging.ERROR)
 
 
-VALID_IPS = ''' Target host\n
+IP_HELP = ''' Target host\n
                 single IP: -t 192.168.1.4\n
                 domain name: -t www.google.com\n
                 (default = your subnet) [multi-target]
             '''
-VALID_PORTS = ''' Target port(s) to scan\n
+PORTS_HELP = ''' Target port(s) to scan\n
                   single port: -p 80\n
                   multiple ports: -p 80 -p 443 -p 22
               '''
-VALID_RANGE = ''' Target range of ports to scan\n
+RANGE_HELP = ''' Target range of ports to scan\n
                   --r 1 1024
               '''
 
 @click.command()
 @click.argument("interface", nargs=1)
-@click.option("--ip","-i", type=str, help=VALID_IPS)
-@click.option("--ports","-p", multiple=True, type=click.INT, help=VALID_PORTS)
-@click.option("--range","-r", nargs=2, type=click.INT, help=VALID_RANGE)
+@click.option("--ip","-i", type=str, help=IP_HELP)
+@click.option("--ports","-p", multiple=True, type=click.INT, help=PORTS_HELP)
+@click.option("--range","-r", nargs=2, type=click.INT, help=RANGE_HELP)
 def main(interface: str, ip, ports, range):
     """ pnmap """
     ports = range if range else list(ports) if ports else [80]
