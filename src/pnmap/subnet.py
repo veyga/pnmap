@@ -35,6 +35,7 @@ class Subnet:
             total_len += bin(int(oct)).count("1")
         return CIDR(self.netid, total_len)
 
+
     def _calc_gateway(self) -> str:
         net_octets = self.netid.split(".")
         target_oct = self.cidr.suffix // 8
@@ -52,7 +53,7 @@ class Subnet:
         match = re.search(rf"{IPV4r}\Z", ip)
         if not match:
             return False
-        return self == Subnet(match.group(0), self.mask)
+        return self == Subnet.from_host(match.group(0), self.mask)
 
     def __eq__(self, other):
         return str(self) == str(other)
