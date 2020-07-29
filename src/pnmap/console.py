@@ -23,6 +23,7 @@ from typing import List, Optional, Tuple, Union
 @click.option("--portrange", nargs=2, default=(0, 80), type=int, help="Range to scan\n(default= --portrange 0 8)")
 def main(interface: str, ip: str, portrange: Tuple[int]):
     """ pnmap """
+    print("PNMAP WELCOME!")
     valid_interfaces = get_if_list()
     if interface not in valid_interfaces:
         print(f"{interface} not found in your interfaces ({valid_interfaces})")
@@ -69,13 +70,11 @@ def resolve_local_net(interface: str, ip: str, portrange: Tuple[int]):
         for pkt in responses:
             print(f"mac = {pkt[ARP].hwsrc}    ip = {pkt[ARP].psrc}")
             targets.append(Ether(dst=pkt[ARP].hwsrc) / IP(dst=pkt[ARP].psrc))
-        for t in targets:
-            print(f"target  mac = {t.dst}   ip = {t[IP].dst}")
+        # correct
         # for t in targets:
-        #     print(f"{t.summary()}")
-# ans, unans = srp(Ether(dst = "ff:ff:ff:ff:ff:ff") / ARP(pdst = "10.0.2.0/24"), timeout = 5, iface = "eth0")
+        #     print(f"target  mac = {t.dst}   ip = {t[IP].dst}")
 
 
 def resolve_external_net(interface, ip, portrange, gateway):
-    print(f"scanning local net:  iface {iface} ip {ip} portrange {portrange}")
+    print(f"scanning local net:  interface {interface} ip {ip} portrange {portrange}")
     # print("scanning external net")
