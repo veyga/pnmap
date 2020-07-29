@@ -53,19 +53,22 @@ class Subnet:
                 gateway_octets.append(str(int(host_octets[i]) + 1))
         return ".".join(gateway_octets)
 
+    def contains(self, ip: str) -> bool:
+        """ determines in a given IP falls with a subnet """
+        return True
+
     def __str__(self):
         return str(self.cidr)
 
 
-def determine_subnet(interface: str) -> Optional[Subnet]:
+def determine_subnet(interface: str) -> Subnet:
     """ detemines the subnet of a given interface """
     ifconfig_rez = subprocess.check_output(["ifconfig", interface]).decode("utf-8")
+    inet, mask = ("0.0.0.0", "255.255.255.255")
     match = re.search( r"(inet) ([1-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})", ifconfig_rez)
-    if not match:
-        return None
-    inet = match.group(2)
+    if match:
+        inet = match.group(2)
     match = re.search( r"(netmask) ([1-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})", ifconfig_rez)
-    if not match:
-        return None
-    mask = match.group(2)
+    if match:
+        mask = match.group(2)
     return Subnet(inet, mask)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-# Importing the logging module
 from scapy.all import IP, TCP, ICMP, sr
+from typing import List
 import logging
 
 # This will suppress all messages that have a lower level of seriousness than error messages.
@@ -9,6 +9,9 @@ logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 logging.getLogger("scapy.interactive").setLevel(logging.ERROR)
 logging.getLogger("scapy.loading").setLevel(logging.ERROR)
 
+# class TCPScanner:
+#     for target in targets:
+#         print("scanning sup")
 
 class ScanResult():
     def __init__(self, open, closed, filtered):
@@ -16,6 +19,10 @@ class ScanResult():
         self.closed = []
         self.filtered = []
 
+class TCPScanner:
+    def __init__(self, targets: List[IP], portrange):
+        self.targets = targets
+        self.portrange = portrange
 
 def scan_tcp_port(ip: str) -> ScanResult:
     ans, unans = sr(IP(dst=ip) / TCP(flags="S",
