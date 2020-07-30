@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional, List
-from pnmap.constants import IPV4r, CIDRr
+from pnmap.resolve import *
 import subprocess, re
 
 @dataclass
@@ -50,10 +50,10 @@ class Subnet:
 
     def contains(self, ip: str) -> bool:
         """ determines in a given IP falls with a subnet """
-        match = re.search(rf"{IPV4r}\Z", ip)
+        match = is_ipv4_address(ip)
         if not match:
             return False
-        return self == Subnet.from_host(match.group(0), self.mask)
+        return self == Subnet.from_host(ip, self.mask)
 
     def __eq__(self, other):
         return str(self) == str(other)
