@@ -7,7 +7,10 @@ import pnmap.arp as arp
 import click
 import sys
 
-IP_HELP = ''' Target host\n
+INTERFACE_HELP = ''' Target interface\n
+                If only 1 non-loopback interface is available, pnmap will default to that.
+            '''
+ADDRESS_HELP = ''' Target host\n
                 single IP: -t 192.168.1.4\n
                 domain name: -t www.google.com\n
                 (default = your subnet) [multi-target]
@@ -21,39 +24,43 @@ RANGE_HELP = ''' Target range of ports to scan\n
               '''
 
 @click.command()
-@click.argument("interface", nargs=1)
-@click.option("--ip","-i", type=str, help=IP_HELP)
+@click.option("--interface", "-i", type=str, help=INTERFACE_HELP)
+@click.option("--address","-a", type=str, help=ADDRESS_HELP)
 @click.option("--ports","-p", multiple=True, type=click.INT, help=PORTS_HELP)
 @click.option("--range","-r", nargs=2, type=click.INT, help=RANGE_HELP)
-def main(interface: str, ip, ports, range):
+def main(interface: str, address, ports, range):
     """ pnmap """
     ports = range if range else list(ports) if ports else [80]
-    valid_interfaces = get_if_list()
-    if interface not in valid_interfaces:
-        click.secho(f"{interface} not found in your interfaces ({valid_interfaces})", fg="red")
-        sys.exit(1)
+    valid_interfaces: list = get_if_list()
+    valid_interfaces.remove("lo")
+
+    if interface:
+        while interface not in valid_interfaces:
+            interface = click.prompt(click.style(f"{interface} not found. Re-enter from {valid_interfaces}", fg="red"))
+    elif len(valid_interfaces) == 1:
+        interface = valid_interfaces[0]
 
     # default to local subnet 
     localnet = determine_subnet(interface)
-    if not ip:
-        ip = str(localnet)
+    if not address:
+        address = str(localnet)
 
-    nmap(interface, ip, ports, localnet)
+    nmap(interface, address, ports, localnet)
 
 
-def nmap(interface: str, ip: str, ports: Union[list, tuple], localnet: Subnet):
+def nmap(interface: str, address: str, ports: Union[list, tuple], localnet: Subnet):
     if isinstance(ports, list):
-        click.secho(f"pnmcallbackap scanning port(s) {ports} on host(s) {ip} via interface {interface}", fg="cyan")
+        click.secho(f"pnmap scanning port(s) {ports} on host(s) {address} via interface {interface}", fg="cyan")
     else:
-        click.secho(f"pnmap scanning port(s) {ports[0]} to {ports[1]} on host(s) {ip} via interface {interface}", fg="cyan")
+        click.secho(f"pnmap scanning port(s) {ports[0]} to {ports[1]} on host(s) {address} via interface {interface}", fg="cyan")
     frames: List[Ether] = []
     try:
-        if ip == str(localnet) or localnet.contains(ip):
+        if address == str(localnet) or localnet.contains(address):
             click.secho(f"Target is (in) your subnet! ARP pinging", fg="cyan")
-            frames = arp.gen_local_frames(interface, ip, ports)
+            frames = arp.gen_local_frames(interface, address, ports)
         else:
             click.secho(f"Target is not in your subnet! Routing via gateway {localnet.gateway}", fg="yellow")
-            frames = arp.gen_external_frames(interface, ip, ports, localnet.gateway)
+            frames = arp.gen_external_frames(interface, address, ports, localnet.gateway)
             ensure_connection(frames[0], interface)
     except (arp.ARPError, ConnectionError, IPDomainError) as e:
         click.secho(str(e), fg="red")
