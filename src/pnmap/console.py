@@ -1,7 +1,7 @@
 from scapy.all import srp, srp1, get_if_list, conf, IP, Ether, ARP, TCP, ICMP
 from typing import List, Optional, Tuple, Union
 from pnmap.resolve import *
-from pnmap.scan import scan
+from pnmap.scan import *
 from pnmap.subnet import *
 import pnmap.arp as arp
 import click
@@ -66,7 +66,34 @@ def nmap(interface: str, address: str, ports: Union[list, tuple], localnet: Subn
         click.secho(str(e), fg="red")
         sys.exit(1)
 
-    results = scan(frames, ports, interface)
-    print(results)
+    scanner = Scanner(frames, ports, interface)
+    tcp_results = scanner.scan_tcp()
+    print_results(tcp_results, isinstance(ports, tuple))
+
+
+def print_results(results: List[ScanResult], is_range_scan: bool) -> None:
+    for result in results:
+        click.secho(f"\nAddress: {result.address}", fg="blue")
+        protocol = result.l4_protocol
+        if not is_range_scan:
+            for p in result.port_statuses:
+                click.secho(f"{p.port_num}: {p.status} : {protocol}")
+        else:
+            # searching through a range --> majority are either filtered or closed, based on firewall
+            num_closed, num_filtered = 0, 0
+            for port_status in result.port_statuses:
+                if port_status.status == "closed":
+                    num_closed += 1
+                elif port_status.status == "filtered":
+                    num_filtered += 1
+            hidden_status = "closed" if num_closed > num_filtered else "filtered"
+            hidden_count = 0
+            for p in result.port_statuses:
+                if p.status != hidden_status:
+                    click.secho(f"{p.port_num} : {p.status} : {protocol}")
+                else:
+                    hidden_count += 1
+            if hidden_count:
+                click.echo(f"Not shown: {hidden_count} {hidden_status}")
 
 
