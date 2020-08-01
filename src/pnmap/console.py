@@ -49,11 +49,11 @@ def main(interface: str, address, ports, range, transport):
     valid_interfaces: list = get_if_list()
     valid_interfaces.remove("lo")
 
-    if interface:
-        while interface not in valid_interfaces:
-            interface = click.prompt(click.style(f"{interface} not found. Re-enter from {valid_interfaces}", fg="red"))
-    elif len(valid_interfaces) == 1:
+    if not interface and len(valid_interfaces) == 1:
         interface = valid_interfaces[0]
+    else:
+        while interface not in valid_interfaces:
+            interface = click.prompt(click.style(f"Interface not found/ambiguous. Choose from {valid_interfaces}", fg="red"))
 
     # default to local subnet 
     localnet = determine_subnet(interface)
