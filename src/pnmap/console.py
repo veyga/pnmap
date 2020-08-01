@@ -22,13 +22,20 @@ PORTS_HELP = ''' Target port(s) to scan\n
 RANGE_HELP = ''' Target range of ports to scan\n
                   --r 1 1024
               '''
+PROTOCOL_HELP = ''' L4 protocol\n
+                    tcp: -t TCP\n
+                    udp: -t UDP\n
+                    (default = BOTH)
+               '''
 
 @click.command()
 @click.option("--interface", "-i", type=str, help=INTERFACE_HELP)
 @click.option("--address","-a", type=str, help=ADDRESS_HELP)
 @click.option("--ports","-p", multiple=True, type=click.INT, help=PORTS_HELP)
 @click.option("--range","-r", nargs=2, type=click.INT, help=RANGE_HELP)
-def main(interface: str, address, ports, range):
+@click.option("--transport","-t", type=click.Choice(["TCP","UDP","BOTH"], case_sensitive=False),
+        default="BOTH", help=PROTOCOL_HELP)
+def main(interface: str, address, ports, range, transport):
     """ pnmap """
     ports = range if range else list(ports) if ports else [80]
     valid_interfaces: list = get_if_list()
@@ -45,55 +52,87 @@ def main(interface: str, address, ports, range):
     if not address:
         address = str(localnet)
 
-    nmap(interface, address, ports, localnet)
+    cli = CLI(interface, address, ports, localnet)
+    cli.nmap(transport)
+    cli.display_results()
 
 
-def nmap(interface: str, address: str, ports: Union[list, tuple], localnet: Subnet):
-    if isinstance(ports, list):
-        click.secho(f"pnmap scanning port(s) {ports} on host(s) {address} via interface {interface}", fg="cyan")
-    else:
-        click.secho(f"pnmap scanning port(s) {ports[0]} to {ports[1]} on host(s) {address} via interface {interface}", fg="cyan")
-    frames: List[Ether] = []
-    try:
-        if address == str(localnet) or localnet.contains(address):
-            click.secho(f"Target is (in) your subnet! ARP pinging", fg="cyan")
-            frames = arp.gen_local_frames(interface, address, ports)
+
+class CLI:
+    def __init__(self, interface: str, address: str, ports: Union[list,tuple], localnet: Subnet):
+        self.interface = interface
+        self.address = address
+        self.ports = ports
+        self.localnet = localnet
+        self.results: List[ScanResult] = []
+
+
+    def nmap(self, transport_protocol) -> None:
+        p, i, a, l = self.ports, self.interface, self.address, self.localnet
+        if isinstance(self.ports, list):
+            click.secho(f"pnmap scanning port(s) {p} on host(s) {a} via interface {a}", fg="cyan")
         else:
-            click.secho(f"Target is not in your subnet! Routing via gateway {localnet.gateway}", fg="yellow")
-            frames = arp.gen_external_frames(interface, address, ports, localnet.gateway)
-            ensure_connection(frames[0], interface)
-    except (arp.ARPError, ConnectionError, IPDomainError) as e:
-        click.secho(str(e), fg="red")
-        sys.exit(1)
+            click.secho(f"pnmap scanning port(s) {p[0]} to {p[1]} on host(s) {a} via interface {i}", fg="cyan")
+        frames: List[Ether] = []
+        try:
+            if self.address == str(self.localnet) or self.localnet.contains(self.address):
+                click.secho(f"Target is (in) your subnet! ARP pinging...", fg="cyan")
+                frames = arp.gen_local_frames(i, a, p)
+            else:
+                click.secho(f"Target is not in your subnet! Routing via gateway {l.gateway}", fg="yellow")
+                frames = arp.gen_external_frames(i, a, p, l.gateway)
+                ensure_connection(frames[0], interface)
+        except (arp.ARPError, ConnectionError, IPDomainError) as e:
+            click.secho(str(e), fg="red")
+            sys.exit(1)
 
-    scanner = Scanner(frames, ports, interface)
-    tcp_results = scanner.scan_tcp()
-    print_results(tcp_results, isinstance(ports, tuple))
+        scanner = Scanner(frames, self.ports, self.interface)
+        if transport_protocol == "BOTH":
+            click.secho(f"Scanning TCP.....")
+            tcp_results = scanner.scan_tcp()
+            click.secho(f"Scanning UDP.....")
+            udp_results = scanner.scan_udp()
+            self.results = scanner.merge_results(tcp_results, udp_results)
+        elif transport_protocol == "TCP":
+            click.secho(f"Scanning TCP.....")
+            self.results = scanner.scan_tcp()
+        elif transport_protocol == "UDP":
+            click.secho(f"Scanning UDP.....")
+            self.results = scanner.scan_udp()
 
 
-def print_results(results: List[ScanResult], is_range_scan: bool) -> None:
-    for result in results:
-        click.secho(f"\nAddress: {result.address}", fg="blue")
-        protocol = result.l4_protocol
-        if not is_range_scan:
-            for p in result.port_statuses:
-                click.secho(f"{p.port_num}: {p.status} : {protocol}")
-        else:
+    def display_results(self) -> None:
+        for result in self.results:
+            click.secho(f"\nAddress: {result.address}", fg="blue")
             # searching through a range --> majority are either filtered or closed, based on firewall
-            num_closed, num_filtered = 0, 0
-            for port_status in result.port_statuses:
-                if port_status.status == "closed":
-                    num_closed += 1
-                elif port_status.status == "filtered":
-                    num_filtered += 1
-            hidden_status = "closed" if num_closed > num_filtered else "filtered"
-            hidden_count = 0
-            for p in result.port_statuses:
-                if p.status != hidden_status:
-                    click.secho(f"{p.port_num} : {p.status} : {protocol}")
-                else:
-                    hidden_count += 1
-            if hidden_count:
-                click.echo(f"Not shown: {hidden_count} {hidden_status}")
+            # so dont display a long list of closed/filtered
+            MAX_DISPLAY = 10
+            if not isinstance(self.ports, tuple) or (self.ports[1] - self.ports[0] <= MAX_DISPLAY):
+                for p in result.port_statuses:
+                    if p.status == "open":
+                        click.secho(f"{p.port_num}/{p.protocol}\topen", fg="green")
+                    elif p.status == "closed":
+                        click.secho(f"{p.port_num}/{p.protocol}\tclosed", fg="red")
+                    elif p.status == "filtered":
+                        click.secho(f"{p.port_num}/{p.protocol}\tfiltered", fg="yellow")
+            else:
+                num_closed, num_filtered = 0, 0
+                for port_status in result.port_statuses:
+                    if port_status.status == "closed":
+                        num_closed += 1
+                    elif port_status.status == "filtered":
+                        num_filtered += 1
 
+                for p in result.port_statuses:
+                    if p.status == "open":
+                        click.secho(f"{p.port_num}/{p.protocol}\topen", fg="green")
+                    elif p.status == "closed" and num_closed < MAX_DISPLAY:
+                        click.secho(f"{p.port_num}/{p.protocol}\tclosed", fg="red")
+                    elif p.status == "filtered" and num_filtered < MAX_DISPLAY:
+                        click.secho(f"{p.port_num}/{p.protocol}\tfiltered", fg="yellow")
+
+                if num_closed > MAX_DISPLAY:
+                    click.echo(f"Not shown: {num_closed} closed")
+                if num_filtered > MAX_DISPLAY:
+                    click.echo(f"Not shown: {num_filtered} filtered")
 

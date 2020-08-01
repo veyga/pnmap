@@ -1,9 +1,9 @@
-from scapy.all import Ether, IP, TCP, ICMP, srp
+from scapy.all import Ether, IP, TCP, UDP, ICMP, srp
 from typing import List, Tuple, Union
 from collections import namedtuple
 
-ScanResult = namedtuple("ScanResult", ["address","l4_protocol","port_statuses"])
-PortStatus = namedtuple("PortStatus", ["port_num", "status"])
+ScanResult = namedtuple("ScanResult", ["address", "port_statuses"])
+PortStatus = namedtuple("PortStatus", ["port_num", "status", "protocol"])
 
 class Scanner:
     def __init__(self, frames: List[Ether], ports: Union[list, tuple], interface):
@@ -12,66 +12,65 @@ class Scanner:
         self.interface = interface
 
     def scan_tcp(self) -> List[ScanResult]:
+        """ Scans this scanner's list of addresses and ports for TCP port statuses """
         tcp_scan_results = []
         for frame in self.frames:
-            ans, unans = srp(frame / TCP(flags="S", dport=self.ports), iface=self.interface, timeout=5, verbose=1)
+            ans, unans = srp(frame / TCP(flags="S", dport=self.ports), iface=self.interface, timeout=5, verbose=0)
             port_statuses = []
             for sent, received in ans:
                 if received.haslayer(TCP):
                     if str(received[TCP].flags) == "SA": #SA = SYN + ACK
-                        port_statuses.append(PortStatus(sent[TCP].dport, "open"))
+                        port_statuses.append(PortStatus(sent[TCP].dport, "open", "TCP"))
                     elif str(received[TCP].flags) == "RA": #RA = RST + ACK
-                        port_statuses.append(PortStatus(sent[TCP].dport, "closed"))
+                        port_statuses.append(PortStatus(sent[TCP].dport, "closed", "TCP"))
             for sent in unans:
-                port_statuses.append(PortStatus(sent[TCP].dport, "filtered"))
+                port_statuses.append(PortStatus(sent[TCP].dport, "filtered", "TCP"))
             port_statuses.sort()
-            tcp_scan_results.append(ScanResult(frame[IP].dst, "TCP", port_statuses))
+            tcp_scan_results.append(ScanResult(frame[IP].dst, port_statuses))
         return tcp_scan_results
 
-    # def scan_udp(self):
-    #     pass
 
-# def scan(frames: List[Ether], ports: Union[list, tuple], interface: str):
-#     for frame in frames:
-#         # ans, unans = sr(IP(dst="192.168.1.14") / TCP(flags="S", dport=(0, 1024)), timeout=5, verbose=0)
-#         ans, unans = srp(frame / TCP(flags="S", dport=(0, 1024)), timeout=5, verbose=0)
-#         sr
-#     return "success"
+    def scan_udp(self) -> List[ScanResult]:
+        """ Scans this scanner's list of addresses and ports for UDP port statuses """
+        udp_scan_results = []
+        for frame in self.frames:
+            ans, unans = srp(frame / UDP(dport=self.ports), iface=self.interface, timeout=5, verbose=0)
+            port_statuses = []
+            for sent, received in ans:
+                if received.haslayer(ICMP) and int(received[ICMP].type) == 3:
+                    # type 3, code 3 --> closed
+                    if int(received[ICMP].code) == 3:
+                        port_statuses.append(PortStatus(sent[UDP].dport, "closed", "UDP"))
+                    # type 3, code 1,2,9,10,13 --> filtered
+                    elif int(received[ICMP].code) in [1,2,9,10,13]:
+                        port_statuses.append(PortStatus(sent[UDP].dport, "filtered", "UDP"))
+                    else:
+                        port_statuses.append(PortStatus(sent[UDP].dport, "open", "UDP"))
+            for sent in unans:
+                port_statuses.append(PortStatus(sent[UDP].dport, "filtered", "UDP"))
+            port_statuses.sort()
+            udp_scan_results.append(ScanResult(frame[IP].dst, port_statuses))
+        return udp_scan_results
 
 
-# class Scanner:
-#     def __init__(self, targets: List[Ether], portrange: Tuple[int,int]):
-#         self.targets = targets
-#         self.portrange = portrange
-# class ScanResult():
-#     def __init__(self, open, closed, filtered):
-#         self.open = []
-#         self.closed = []
-#         self.filtered = []
 
-# class TCPScanner:
-#     def __init__(self, targets: List[IP], portrange):
-#         self.targets = targets
-#         self.portrange = portrange
-
-# def scan_tcp_port(ip: str) -> ScanResult:
-#     ans, unans = sr(IP(dst=ip) / TCP(flags="S",
-#                                      dport=(0, 1024)), timeout=5, verbose=0)
-
-#     rez = ScanResult([], [], [])
-#     for sent, received in ans:
-#         if received.haslayer(TCP):
-#             if str(received[TCP].flags) == "SA":
-#                 rez.open.append(ans)
-#             elif str(received[TCP].flags) == "RA":
-#                 rez.closed.append(ans)
-#         elif received.haslayer(ICMP) and str(received[ICMP].type) == "3":
-#             rez.filtered.append(ans)
-
-#     # Handling unanswered packets
-#     rez.filtered.append(unans)
-#     # for sent in unans:
-#     #     rez.filtered.append(sent)
-
-#     return rez
-#     # print("\nAll other ports are filtered.\n")
+    def merge_results(self, tcp_results: List[ScanResult], udp_results: List[ScanResult]):
+        """ Merges TCP and UDP scan results for easier display """
+        merged_results: List[ScanResult] = []
+        for i in range(len(tcp_results)):
+            res_for_address: List[PortStatus] = []
+            for tport, uport in zip(tcp_results[i].port_statuses, udp_results[i].port_statuses):
+                # print(f"tport {tport}  uport {uport}")
+                if tport.status == "open" and uport.status != "open":
+                    res_for_address.append(PortStatus(tport.port_num, "open", "TCP"))
+                elif uport.status == "open" and tport.status != "open":
+                    res_for_address.append(PortStatus(tport.port_num, "open", "UDP"))
+                elif tport.status == uport.status:
+                    res_for_address.append(PortStatus(tport.port_num, tport.status, "TCP/UDP"))
+                # closed is generally more useful info than filtered as many IPs have a firewall
+                elif tport.status == "closed" and uport.status == "filtered":
+                    res_for_address.append(PortStatus(tport.port_num, "closed", "TCP"))
+                elif uport.status == "closed" and tport.status == "filtered":
+                    res_for_address.append(PortStatus(tport.port_num, "closed", "UDP"))
+            merged_results.append(ScanResult(tcp_results[i].address, res_for_address))
+        return merged_results

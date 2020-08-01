@@ -10,7 +10,7 @@ class ARPError(Exception):
 
 def gen_local_frames(interface: str, ip: str, ports: Union[list,tuple]) -> List[Ether]:
     """ Generates local frames. Throws ARPError if no response """
-    ans, unans = srp(Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(pdst=ip), timeout=5, iface=interface)
+    ans, unans = srp(Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(pdst=ip), timeout=5, iface=interface, verbose=0)
     responses = [rcvd for sent, rcvd in ans]
     if not responses:
         raise ARPError(f"No ARP reply from {ip}, try scanning the whole subnet")
