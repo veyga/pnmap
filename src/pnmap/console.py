@@ -10,11 +10,12 @@ import sys
 import subprocess
 
 INTERFACE_HELP = ''' Target interface\n
+                -i wlan0\n
                 If only 1 non-loopback interface is available, pnmap will default to that.
             '''
 ADDRESS_HELP = ''' Target host\n
-                single IP: -t 192.168.1.4\n
-                domain name: -t www.google.com\n
+                single IP: -a 192.168.1.4\n
+                domain name: -a www.google.com\n
                 (default = your subnet) [multi-target]
             '''
 PORTS_HELP = ''' Target port(s) to scan\n
