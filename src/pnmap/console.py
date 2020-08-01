@@ -81,7 +81,7 @@ class CLI:
             else:
                 click.secho(f"Target is not in your subnet! Routing via gateway {l.gateway}", fg="yellow")
                 frames = arp.gen_external_frames(i, a, p, l.gateway)
-                ensure_connection(frames[0], interface)
+                ensure_connection(frames[0], self.interface)
         except (arp.ARPError, ConnectionError, IPDomainError) as e:
             click.secho(str(e), fg="red")
             sys.exit(1)
