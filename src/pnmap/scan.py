@@ -60,13 +60,12 @@ class Scanner:
         for i in range(len(tcp_results)):
             res_for_address: List[PortStatus] = []
             for tport, uport in zip(tcp_results[i].port_statuses, udp_results[i].port_statuses):
-                # print(f"tport {tport}  uport {uport}")
-                if tport.status == "open" and uport.status != "open":
+                if tport.status == uport.status:
+                    res_for_address.append(PortStatus(tport.port_num, tport.status, "TCP/UDP"))
+                elif tport.status == "open" and uport.status != "open":
                     res_for_address.append(PortStatus(tport.port_num, "open", "TCP"))
                 elif uport.status == "open" and tport.status != "open":
                     res_for_address.append(PortStatus(tport.port_num, "open", "UDP"))
-                elif tport.status == uport.status:
-                    res_for_address.append(PortStatus(tport.port_num, tport.status, "TCP/UDP"))
                 # closed is generally more useful info than filtered as many IPs have a firewall
                 elif tport.status == "closed" and uport.status == "filtered":
                     res_for_address.append(PortStatus(tport.port_num, "closed", "TCP"))

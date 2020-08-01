@@ -3,6 +3,8 @@ from pnmap.console import main
 import pytest
 
 
+# Remove the sudo requirement in console.main in order to run tests
+
 @pytest.fixture
 def runner() -> CliRunner:
     return CliRunner()
@@ -39,9 +41,9 @@ def test_external_ip_uses_gateway(runner: CliRunner, interface: str, external_ip
     assert "Target is not in your subnet! Routing via gateway" in result.output
 
 
-def test_no_ports_pings_port_80(runner: CliRunner, interface: str):
+def test_no_ports_pings_default_ports(runner: CliRunner, interface: str):
     result = runner.invoke(main)
-    assert "port(s) [80]" in result.output
+    assert "port(s) [22, 80, 443]" in result.output
 
 
 def test_single_port_pings_single_port(runner: CliRunner, interface: str):
@@ -50,8 +52,8 @@ def test_single_port_pings_single_port(runner: CliRunner, interface: str):
 
 
 def test_multiple_ports_pings_multiple_port(runner: CliRunner, interface: str):
-    result = runner.invoke(main, ["-p", "22", "-p", "443"])
-    assert "port(s) [22, 443]" in result.output
+    result = runner.invoke(main, ["-p", "22", "-p", "443", "--ports", "8080"])
+    assert "port(s) [22, 443, 8080]" in result.output
 
 
 def test_port_range_pings_range(runner: CliRunner, interface: str):
