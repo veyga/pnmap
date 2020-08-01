@@ -22,8 +22,8 @@ PORTS_HELP = ''' Target port(s) to scan\n
                   multiple ports: -p 8080 -p 22 -p 58\n
                   (default = [22, 80, 443])
               '''
-RANGE_HELP = ''' Target range of ports to scan\n
-                  --r 1 1024
+RANGE_HELP = ''' Target range of ports to scan (inclusive)\n
+                  -r 1 1024
               '''
 PROTOCOL_HELP = ''' L4 protocol\n
                     tcp: -t TCP\n
