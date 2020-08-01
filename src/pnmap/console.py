@@ -19,7 +19,7 @@ ADDRESS_HELP = ''' Target host\n
             '''
 PORTS_HELP = ''' Target port(s) to scan\n
                   single port: -p 80\n
-                  multiple ports: -p 8080 -p 22 -p 58
+                  multiple ports: -p 8080 -p 22 -p 58\n
                   (default = [22, 80, 443])
               '''
 RANGE_HELP = ''' Target range of ports to scan\n
