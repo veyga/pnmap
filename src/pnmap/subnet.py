@@ -64,7 +64,7 @@ class Subnet:
 
 def determine_subnet(interface: str) -> Subnet:
     """ detemines the subnet of a given interface """
-    ifconfig_rez = subprocess.check_output(["ifconfig", interface]).decode("utf-8")
+    ifconfig_rez = subprocess.check_output(["sudo", "ifconfig", interface]).decode("utf-8")
     inet, mask = ("0.0.0.0", "255.255.255.255")
     match = re.search(rf"inet ({IPV4r})", ifconfig_rez)
     if match:
