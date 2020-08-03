@@ -40,7 +40,7 @@ PROTOCOL_HELP = ''' L4 protocol\n
 @click.option("--transport","-t", type=click.Choice(["TCP","UDP","BOTH"], case_sensitive=False),
         default="BOTH", help=PROTOCOL_HELP)
 def main(interface: str, address, ports, range, transport):
-    """ pnmap """
+    """ pnmap - A simple network mapper/port scanner """
     whoami = subprocess.check_output(["whoami"]).decode("utf-8")
     match = re.search(r"root", whoami)
     if not match:
