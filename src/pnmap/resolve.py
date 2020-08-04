@@ -7,11 +7,6 @@ IPV4r: str = "[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}"
 CIDRr: str = IPV4r + "\/[0-9]{1,2}"
 
 
-class NonRootUserError(Exception):
-    def __init__(self, msg):
-        super().__init__(msg)
-
-
 class IPDomainError(Exception):
     def __init__(self, msg):
         super().__init__(msg)

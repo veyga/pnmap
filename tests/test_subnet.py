@@ -23,3 +23,8 @@ def test_from_host_parameterized(host, mask, expected):
 ])
 def test_subnet_contains(subnet, host, expected):
     assert subnet.contains(host) == expected
+
+
+def test_subnet_determines_gateway():
+    net = Subnet.from_host("192.168.1.0", "255.255.255.0")
+    assert net.gateway == "192.168.1.1"

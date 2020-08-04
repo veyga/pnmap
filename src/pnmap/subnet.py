@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import List
 from pnmap.resolve import *
 import subprocess, re
 
@@ -37,15 +37,12 @@ class Subnet:
 
 
     def _calc_gateway(self) -> str:
-        net_octets = self.netid.split(".")
-        target_oct = self.cidr.suffix // 8
-        gateway_octets = []
-        for i in range(4):
-            if i != target_oct:
-                gateway_octets.append(net_octets[i])
-            else:
-                gateway_octets.append(str(int(net_octets[i]) + 1))
-        return ".".join(gateway_octets)
+        route = subprocess.check_output(["route", "-n"]).decode("utf-8")
+        match = re.search(rf"0\.0\.0\.0\s*({IPV4r})", route)
+        if match:
+            return match.group(1)
+        else:
+            return "0.0.0.0"
 
 
     def contains(self, ip: str) -> bool:
