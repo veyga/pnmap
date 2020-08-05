@@ -5,16 +5,7 @@ Target is not in your subnet! Routing via gateway 192.168.1.1
 Scanning TCP.....
 Scanning UDP.....
 
-Address: 172.217.3.110
-80/TCP	open
-443/TCP	open
-Not shown: 1023 filtered
-pnmap scanning port(s) 0 to 1024 on host(s) www.google.com via interface wlp59s0
-Target is not in your subnet! Routing via gateway 192.168.1.1
-Scanning TCP.....
-Scanning UDP.....
-
-Address: 172.217.12.164
+Address: 172.217.6.238
 80/TCP	open
 443/TCP	open
 Not shown: 1023 filtered
