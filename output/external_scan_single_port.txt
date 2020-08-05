@@ -1,0 +1,10 @@
+'sudo pnmap -p 80 -a google.com'
+pnmap scanning port(s) [80] on host(s) google.com via interface google.com
+Target is not in your subnet! Routing via gateway 192.168.1.1
+Scanning TCP.....
+Scanning UDP.....
+
+Address: 172.217.3.110
+80/TCP	open
+
+Time elapsed: 5.50s

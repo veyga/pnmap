@@ -1,0 +1,12 @@
+'sudo pnmap -r 0 1024 -a google.com'
+pnmap scanning port(s) 0 to 1024 on host(s) google.com via interface wlp59s0
+Target is not in your subnet! Routing via gateway 192.168.1.1
+Scanning TCP.....
+Scanning UDP.....
+
+Address: 172.217.10.238
+80/TCP	open
+443/TCP	open
+Not shown: 1023 filtered
+
+Time elapsed: 10.49s

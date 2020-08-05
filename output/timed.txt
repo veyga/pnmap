@@ -1,3 +1,0 @@
-sudo pnmap  0.85s user 0.08s system 2% cpu 36.067 total
-sudo pnmap -r 0 1024  3.34s user 0.25s system 8% cpu 41.849 total
-sudo pnmap -r 0 1024 -a google.com  1.71s user 0.14s system 16% cpu 11.064 total

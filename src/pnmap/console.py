@@ -3,8 +3,21 @@ from typing import List, Optional, Tuple, Union
 from pnmap.resolve import *
 from pnmap.scan import *
 from pnmap.subnet import *
+from time import time
 import pnmap.arp as arp
-import click, re, sys, subprocess
+import click, re, sys, subprocess, functools
+
+
+def timed(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        start_time = time()
+        result = fn(*args, **kwargs)
+        end_time = time()
+        click.echo(f"\nTime elapsed: {end_time - start_time:.2f}s")
+        return result
+    return wrapper
+
 
 INTERFACE_HELP = ''' Target interface\n
                 -i wlan0\n
@@ -60,7 +73,6 @@ def main(interface: str, address, ports, range, transport):
 
     cli = CLI(interface, address, ports, localnet)
     cli.nmap(transport)
-    cli.display_results()
 
 
 
@@ -73,6 +85,7 @@ class CLI:
         self.results: List[ScanResult] = []
 
 
+    @timed
     def nmap(self, transport_protocol) -> None:
         p, i, a, l = self.ports, self.interface, self.address, self.localnet
         if isinstance(self.ports, list):
@@ -106,8 +119,10 @@ class CLI:
             click.secho(f"Scanning UDP.....")
             self.results = scanner.scan_udp()
 
+        self._display_results()
 
-    def display_results(self) -> None:
+
+    def _display_results(self) -> None:
         for result in self.results:
             click.secho(f"\nAddress: {result.address}", fg="blue")
             # searching through a range --> majority are either filtered or closed, based on firewall
@@ -141,4 +156,5 @@ class CLI:
                     click.echo(f"Not shown: {num_closed} closed")
                 if num_filtered > MAX_DISPLAY:
                     click.echo(f"Not shown: {num_filtered} filtered")
+
 
