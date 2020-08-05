@@ -29,6 +29,7 @@ class Subnet:
         netid = ".".join(net_oct)
         return Subnet(netid, mask)
 
+
     def _calc_cidr(self) -> CIDR:
         total_len = 0
         for oct in self.mask.split("."):
@@ -39,11 +40,10 @@ class Subnet:
     def _calc_gateway(self) -> str:
         route = subprocess.check_output(["route", "-n"]).decode("utf-8")
         match = re.search(rf"0\.0\.0\.0\s*({IPV4r})", route)
-        return "0.0.0.0"
-        # if match:
-        #     return match.group(1)
-        # else:
-        #     return "0.0.0.0"
+        if match:
+            return match.group(1)
+        else:
+            return "0.0.0.0"
 
 
     def contains(self, ip: str) -> bool:
