@@ -4,10 +4,7 @@ from pnmap.resolve import *
 from pnmap.scan import *
 from pnmap.subnet import *
 import pnmap.arp as arp
-import click
-import re
-import sys
-import subprocess
+import click, re, sys, subprocess
 
 INTERFACE_HELP = ''' Target interface\n
                 -i wlan0\n
@@ -41,11 +38,11 @@ PROTOCOL_HELP = ''' L4 protocol\n
         default="BOTH", help=PROTOCOL_HELP)
 def main(interface: str, address, ports, range, transport):
     """ pnmap - A simple network mapper/port scanner for Linux """
-    whoami = subprocess.check_output(["whoami"]).decode("utf-8")
-    match = re.search(r"root", whoami)
-    if not match:
-        click.secho(f"pnmap must be run/installed as root (Scapy requirement)", fg="red")
-        sys.exit(1)
+    # whoami = subprocess.check_output(["whoami"]).decode("utf-8")
+    # match = re.search(r"root", whoami)
+    # if not match:
+    #     click.secho(f"pnmap must be run/installed as root (Scapy requirement)", fg="red")
+    #     sys.exit(1)
     ports = range if range else list(ports) if ports else [22, 80, 443]
     valid_interfaces: list = get_if_list()
     valid_interfaces.remove("lo")
