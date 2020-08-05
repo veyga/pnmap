@@ -1,0 +1,27 @@
+"sudo pnmap -r 0 1024"
+
+pnmap scanning port(s) 0 to 1024 on host(s) 192.168.1.0/24 via interface wlp59s0
+Target is (in) your subnet! ARP pinging...
+Scanning TCP.....
+Scanning UDP.....
+
+Address: 192.168.1.1
+23/TCP	open
+53/TCP	open
+80/TCP	open
+Not shown: 1009 closed
+Not shown: 13 filtered
+
+Address: 192.168.1.2
+Not shown: 1025 filtered
+
+Address: 192.168.1.3
+0/UDP	closed
+135/TCP	open
+139/TCP	open
+445/TCP	open
+554/TCP	open
+Not shown: 1020 filtered
+
+Address: 192.168.1.16
+Not shown: 1025 filtered
