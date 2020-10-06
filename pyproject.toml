@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pnmap"
-version = "0.1.0"
+version = "0.1.1"
 description = "A simplified Python implementation of nmap"
 authors = ["Andrew Stefanich <andrewstefanich@gmail.com>"]
 license = "MIT"
