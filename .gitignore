@@ -10,8 +10,7 @@ __pycache__/
 .Python
 build/
 develop-eggs/
-# TODO uncomment dist, need to see if working on other systems
-# dist/
+dist/
 downloads/
 eggs/
 .eggs/

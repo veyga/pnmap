@@ -1,8 +1,15 @@
 [tool.poetry]
 name = "pnmap"
 version = "0.1.0"
-description = "a simplified python implementation of nmap"
+description = "A simplified Python implementation of nmap"
 authors = ["Andrew Stefanich <andrewstefanich@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/veyga/pnmap"
+keywords = ["network", "scan", "nmap"]
+classifiers = [
+  "Environment :: Console"
+]
 
 [tool.poetry.dependencies]
 python = "^3.8"
