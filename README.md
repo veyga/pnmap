@@ -22,6 +22,7 @@ A simplified Python implementation of nmap (network mapper/port scanner).
 - See [outputs](https://github.com/veyga/pnmap/tree/master/output) for specific use cases.
 
 ## Additional Information
+- pnmap is a Linux only utility.
 - As pnmap utilizes packet injection, it must be run as sudo
 - Due to network briding, pnmap does not work deterministically inside VM's (e.g. Virtualbox, VMWare)
 - Results which return as "closed" implies the port returned a response
